@@ -74,16 +74,14 @@ public class RequestHandler extends Thread {
         			
         			if(user == null) {
         				log.debug("User Not Found");
-        				DataOutputStream dos = new DataOutputStream(out);
-        				response302Header(dos);
+        				responseResource(out,"/user/login_failed.html");
         			}else if(user.getPassword().equals(params.get("password"))) {
         				log.debug("login success!!");
         				DataOutputStream dos = new DataOutputStream(out);
         				response302HeaderWithCookie(dos,"logined=true");
         			} else {
         				log.debug("Password Mismatch!");
-        				DataOutputStream dos = new DataOutputStream(out);
-        				response302Header(dos);
+        				responseResource(out,"/user/login_failed.html");
         			}
         			
         		}        		        		        		
@@ -150,5 +148,11 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+    private void responseResource(OutputStream out, String url) throws IOException{
+    	DataOutputStream dos = new DataOutputStream(out);
+    	byte[] body = Files.readAllBytes(new File("./webapp"+url).toPath());
+    	response200Header(dos, body.length);
+    	responseBody(dos, body);
     }
 }
