@@ -36,48 +36,18 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
         	HttpRequest request = new HttpRequest(in);
-        	String path = request.getPath();
+        	String path = getDefaultUrl(request.getPath());
         	
-            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-            String line = br.readLine();
-            if (line == null) {
-                return;
-            }
-
-            log.debug("request line : {}", line);
-            String[] tokens = line.split(" ");
-
-            int contentLength = 0;
-            boolean logined = false;
-            while (!line.equals("")) {
-                line = br.readLine();
-                log.debug("header : {}", line);
-
-                if (line.contains("Content-Length")) {
-                    contentLength = getContentLength(line);
-                }
-
-                if (line.contains("Cookie")) {
-                    logined = isLogin(line);
-                }
-            }
-
-            String url = getDefaultUrl(tokens);
-            if ("/user/create".equals(url)) {
-                String body = IOUtils.readData(br, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryString(body);
-                User user = new User(params.get("userId"), params.get("password"), params.get("name"),
-                        params.get("email"));
+            if ("/user/create".equals(path)) {
+                User user = new User(request.getParameter("userId"), request.getParameter("password"), request.getParameter("name"), request.getParameter("email"));
                 log.debug("user : {}", user);
                 DataBase.addUser(user);
                 DataOutputStream dos = new DataOutputStream(out);
                 response302Header(dos);
-            } else if ("/user/login".equals(url)) {
-                String body = IOUtils.readData(br, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryString(body);
-                User user = DataBase.findUserById(params.get("userId"));
+            } else if ("/user/login".equals(path)) {
+                User user = DataBase.findUserById(request.getParameter("userId"));
                 if (user != null) {
-                    if (user.login(params.get("password"))) {
+                    if (user.login(request.getParameter("password"))) {
                         DataOutputStream dos = new DataOutputStream(out);
                         response302LoginSuccessHeader(dos);
                     } else {
@@ -86,8 +56,8 @@ public class RequestHandler extends Thread {
                 } else {
                     responseResource(out, "/user/login_failed.html");
                 }
-            } else if ("/user/list".equals(url)) {
-                if (!logined) {
+            } else if ("/user/list".equals(path)) {
+                if (!isLogin(request.getHeader("Cookie"))) {
                     responseResource(out, "/user/login.html");
                     return;
                 }
@@ -107,19 +77,20 @@ public class RequestHandler extends Thread {
                 DataOutputStream dos = new DataOutputStream(out);
                 response200Header(dos, body.length);
                 responseBody(dos, body);
-            } else if (url.endsWith(".css")) {
-                responseCssResource(out, url);
+            } else if (path.endsWith(".css")) {
+                responseCssResource(out, path);
             } else {
-                responseResource(out, url);
+                responseResource(out, path);
             }
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private boolean isLogin(String line) {
-        String[] headerTokens = line.split(":");
-        Map<String, String> cookies = HttpRequestUtils.parseCookies(headerTokens[1].trim());
+    private boolean isLogin(String cookieValue) {
+    	log.debug("cookieValue : {}", cookieValue);
+        Map<String, String> cookies = HttpRequestUtils.parseCookies(cookieValue);
+        log.debug("cookies : {}", cookies.toString());
         String value = cookies.get("logined");
         if (value == null) {
             return false;
@@ -146,12 +117,11 @@ public class RequestHandler extends Thread {
         return Integer.parseInt(headerTokens[1].trim());
     }
 
-    private String getDefaultUrl(String[] tokens) {
-        String url = tokens[1];
-        if (url.equals("/")) {
-            url = "/index.html";
+    private String getDefaultUrl(String path) {
+        if (path.equals("/")) {
+        	path = "/index.html";
         }
-        return url;
+        return path;
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
