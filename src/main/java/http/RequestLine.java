@@ -11,8 +11,10 @@ import util.HttpRequestUtils;
 class RequestLine {
     private static final Logger log = LoggerFactory.getLogger(RequestLine.class);
 
-    private String method;
-    private String path;
+    //private String method;	//요청방식
+    private HttpMethod method;
+    private String path;	//요청 url
+    
 
     private Map<String, String> params = new HashMap<String, String>();
 
@@ -20,10 +22,10 @@ class RequestLine {
     	log.debug("request line : {}", requestLine);
     	String[] splited = requestLine.split(" ");	//첫째줄, 요청라인 == 메소드 URL http버전 
     	//(1)URL
-    	method = splited[0];	
+    	method = HttpMethod.valueOf(splited[0]);	
     	
     	// (2)path(url) 구하기
-    	if(method.equals("POST"))	{
+    	if(method.isPost())	{
     		path = splited[1];
     		return;
     	}
@@ -38,7 +40,7 @@ class RequestLine {
     	}
     }
 
-    String getMethod() {
+    HttpMethod getMethod() {
         return method;
     }
 

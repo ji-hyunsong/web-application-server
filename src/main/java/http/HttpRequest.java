@@ -40,7 +40,7 @@ public class HttpRequest {
     		}
     		
     		//(4)요청본문
-    		if(getMethod().equals("POST")) {
+    		if(getMethod().isPost()) {
     			String requestBody = IOUtils.readData(br, Integer.parseInt(headers.get("Content-Length")));
     			params = HttpRequestUtils.parseQueryString(requestBody);
     		}else {
@@ -52,7 +52,7 @@ public class HttpRequest {
     }
 
 
-    public String getMethod() {
+    public HttpMethod getMethod() {
         return requestLine.getMethod();
     }
 
